@@ -1,5 +1,5 @@
 # ==============================
-# Cyber Intrusion Detection (FINAL PRO VERSION - FIXED)
+# Cyber Intrusion Detection (FINAL PRO VERSION + MANUAL INPUT)
 # ==============================
 
 import streamlit as st
@@ -52,25 +52,54 @@ st.markdown('<p class="title">🔐 Cyber Intrusion Dashboard</p>', unsafe_allow_
 st.markdown("### 🌐 Interactive Security Analytics")
 
 # ==============================
-# Prediction Function (FIXED)
+# 🔥 Manual Prediction Section
+# ==============================
+st.markdown("## 🧠 Manual Prediction")
+
+with st.expander("🔍 Enter Data Manually"):
+
+    col1, col2 = st.columns(2)
+    input_data = {}
+
+    for i, feature in enumerate(features):
+        if i % 2 == 0:
+            input_data[feature] = col1.number_input(feature, value=0.0)
+        else:
+            input_data[feature] = col2.number_input(feature, value=0.0)
+
+    if st.button("🚀 Predict"):
+
+        try:
+            input_df = pd.DataFrame([input_data])
+            input_scaled = scaler.transform(input_df)
+            pred = model.predict(input_scaled)[0]
+
+            if pred == 1:
+                st.error("🚨 Attack Detected!")
+            else:
+                st.success("✅ Normal Traffic")
+
+        except Exception as e:
+            st.error(f"Prediction Error: {e}")
+
+# ==============================
+# Prediction Function
 # ==============================
 def predict_data(df):
 
     df = df.dropna().copy()
 
-    # Encode categorical columns
     le = LabelEncoder()
+
     for col in df.columns:
         if df[col].dtype == 'object':
             df[col] = le.fit_transform(df[col])
 
-    # Extract label
     y_true = None
     if 'label' in df.columns:
         y_true = df['label']
         df = df.drop('label', axis=1)
 
-    # Match features
     X = pd.DataFrame(columns=features)
 
     for col in df.columns:
@@ -79,13 +108,9 @@ def predict_data(df):
 
     X = X.fillna(0)
 
-    # Scale
     X_scaled = scaler.transform(X)
 
-    # Predict
     preds = model.predict(X_scaled)
-
-    # Ensure binary 0/1
     preds = np.array([0 if p == 0 else 1 for p in preds])
 
     return preds, X, y_true
@@ -103,7 +128,9 @@ view_option = st.sidebar.selectbox(
 # ==============================
 # File Upload
 # ==============================
-file = st.file_uploader("📂 Upload CSV File", type=["csv"])
+st.markdown("## 📂 Upload Dataset")
+
+file = st.file_uploader("Upload CSV File", type=["csv"])
 
 if file:
     df = pd.read_csv(file)
@@ -111,7 +138,7 @@ if file:
     preds, X, y_true = predict_data(df)
     df['Prediction'] = preds
 
-    # Apply Filter
+    # Filter
     if view_option == "Normal Only":
         df = df[df['Prediction'] == 0]
     elif view_option == "Attack Only":
@@ -140,27 +167,22 @@ if file:
     col1, col2 = st.columns(2)
 
     with col1:
-        fig1 = px.bar(x=["Normal", "Attack"], y=[normal, attacks], title="Traffic Overview")
-        st.plotly_chart(fig1, use_container_width=True)
+        st.plotly_chart(px.bar(x=["Normal", "Attack"], y=[normal, attacks], title="Traffic Overview"), use_container_width=True)
 
     with col2:
-        fig2 = px.pie(names=["Normal", "Attack"], values=[normal, attacks], hole=0.5, title="Attack %")
-        st.plotly_chart(fig2, use_container_width=True)
+        st.plotly_chart(px.pie(names=["Normal", "Attack"], values=[normal, attacks], hole=0.5, title="Attack %"), use_container_width=True)
 
     # Trend
     trend = df['Prediction'].cumsum()
-    fig3 = px.line(trend, title="Attack Trend")
-    st.plotly_chart(fig3, use_container_width=True)
+    st.plotly_chart(px.line(trend, title="Attack Trend"), use_container_width=True)
 
     # Distribution
     if not numeric_df.empty:
-        fig4 = px.histogram(numeric_df, x=numeric_df.columns[0], title="Distribution")
-        st.plotly_chart(fig4, use_container_width=True)
+        st.plotly_chart(px.histogram(numeric_df, x=numeric_df.columns[0], title="Distribution"), use_container_width=True)
 
     # Boxplot
     if numeric_df.shape[1] >= 2:
-        fig5 = px.box(numeric_df.iloc[:, :2], title="Outliers")
-        st.plotly_chart(fig5, use_container_width=True)
+        st.plotly_chart(px.box(numeric_df.iloc[:, :2], title="Outliers"), use_container_width=True)
 
     # ==============================
     # Feature Importance
@@ -169,11 +191,10 @@ if file:
 
     if hasattr(model, "feature_importances_"):
         importances = pd.Series(model.feature_importances_, index=features).sort_values(ascending=False).head(10)
-        fig6 = px.bar(importances, orientation='h', title="Top Features")
-        st.plotly_chart(fig6, use_container_width=True)
+        st.plotly_chart(px.bar(importances, orientation='h', title="Top Features"), use_container_width=True)
 
     # ==============================
-    # ML Evaluation (FIXED)
+    # ML Evaluation
     # ==============================
     if y_true is not None and len(set(y_true)) > 1:
 
@@ -192,8 +213,8 @@ if file:
                                  index=["Actual Normal", "Actual Attack"],
                                  columns=["Pred Normal", "Pred Attack"])
 
-            fig_cm = px.imshow(cm_df, text_auto=True, title="Confusion Matrix")
-            st.plotly_chart(fig_cm, use_container_width=True)
+            st.plotly_chart(px.imshow(cm_df, text_auto=True, title="Confusion Matrix"),
+                            use_container_width=True)
 
         except Exception as e:
             st.error(f"Confusion Matrix Error: {e}")
