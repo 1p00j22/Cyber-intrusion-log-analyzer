@@ -1,8 +1,8 @@
-==============================
+# ==============================
 
-Cyber Intrusion Detection (FINAL PRO VERSION + LIMITED MANUAL INPUT)
+# Cyber Intrusion Detection (FINAL PRO VERSION + LIMITED MANUAL INPUT)
 
-==============================
+# ==============================
 
 import streamlit as st
 import pandas as pd
@@ -12,19 +12,19 @@ import plotly.express as px
 from sklearn.preprocessing import LabelEncoder
 from sklearn.metrics import confusion_matrix, accuracy_score
 
-==============================
+# ==============================
 
-Config
+# Config
 
-==============================
+# ==============================
 
 st.set_page_config(page_title="Intrusion Dashboard", layout="wide")
 
-==============================
+# ==============================
 
-UI STYLE
+# UI STYLE
 
-==============================
+# ==============================
 
 st.markdown("""
 
@@ -44,41 +44,44 @@ body {
     font-weight: bold;
     color: #00ffd5;
 }
-</style>""", unsafe_allow_html=True)
+</style>
 
-==============================
+""", unsafe_allow_html=True)
 
-Load Model
+# ==============================
 
-==============================
+# Load Model
+
+# ==============================
 
 model = joblib.load('rf_model.pkl')
 scaler = joblib.load('scaler.pkl')
 features = joblib.load('features.pkl')
 
-==============================
+# ==============================
 
-Title
+# Title
 
-==============================
+# ==============================
 
 st.markdown('<p class="title">🔐 Cyber Intrusion Dashboard</p>', unsafe_allow_html=True)
 st.markdown("### 🌐 Interactive Security Analytics")
 
-==============================
+# ==============================
 
-🔥 Manual Prediction Section
+# 🔥 Manual Prediction Section
 
-==============================
+# ==============================
 
 st.markdown("## 🧠 Manual Prediction")
 
-👇 ONLY 4 FEATURES (change if needed)
+# 👇 ONLY 4 FEATURES (change if needed)
 
 selected_features = features[:4]
 
 with st.expander("🔍 Enter Data Manually"):
 
+```
 col1, col2 = st.columns(2)
 input_data = {}
 
@@ -110,15 +113,17 @@ if st.button("🚀 Predict"):
 
     except Exception as e:
         st.error(f"Prediction Error: {e}")
+```
 
-==============================
+# ==============================
 
-Prediction Function
+# Prediction Function
 
-==============================
+# ==============================
 
 def predict_data(df):
 
+```
 df = df.dropna().copy()
 
 le = LabelEncoder()
@@ -146,12 +151,13 @@ preds = model.predict(X_scaled)
 preds = np.array([0 if p == 0 else 1 for p in preds])
 
 return preds, X, y_true
+```
 
-==============================
+# ==============================
 
-Sidebar Filter
+# Sidebar Filter
 
-==============================
+# ==============================
 
 st.sidebar.markdown("## 🔍 Filters")
 
@@ -160,11 +166,11 @@ view_option = st.sidebar.selectbox(
 ["All", "Normal Only", "Attack Only"]
 )
 
-==============================
+# ==============================
 
-File Upload
+# File Upload
 
-==============================
+# ==============================
 
 st.markdown("## 📂 Upload Dataset")
 
@@ -173,6 +179,7 @@ file = st.file_uploader("Upload CSV File", type=["csv"])
 if file:
 df = pd.read_csv(file)
 
+```
 preds, X, y_true = predict_data(df)
 df['Prediction'] = preds
 
@@ -270,3 +277,4 @@ st.dataframe(df[df['Prediction'] == 1])
 # Download
 # ==============================
 st.download_button("⬇️ Download Results", df.to_csv(index=False), "results.csv")
+```
