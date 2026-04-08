@@ -1,5 +1,5 @@
 # ==============================
-# Cyber Intrusion Detection (FINAL CLEAN VERSION)
+# Cyber Intrusion Detection (FINAL STABLE VERSION)
 # ==============================
 
 import streamlit as st
@@ -10,10 +10,14 @@ import plotly.express as px
 from sklearn.preprocessing import LabelEncoder
 from sklearn.metrics import confusion_matrix, accuracy_score
 
+# ==============================
 # Config
+# ==============================
 st.set_page_config(page_title="Intrusion Dashboard", layout="wide")
 
+# ==============================
 # UI STYLE
+# ==============================
 st.markdown("""
 <style>
 body {
@@ -34,16 +38,22 @@ body {
 </style>
 """, unsafe_allow_html=True)
 
+# ==============================
 # Load Model
+# ==============================
 model = joblib.load('rf_model.pkl')
 scaler = joblib.load('scaler.pkl')
 features = joblib.load('features.pkl')
 
+# ==============================
 # Title
+# ==============================
 st.markdown('<p class="title">🔐 Cyber Intrusion Dashboard</p>', unsafe_allow_html=True)
 st.markdown("### 🌐 Interactive Security Analytics")
 
+# ==============================
 # Manual Prediction
+# ==============================
 st.markdown("## 🧠 Manual Prediction")
 
 selected_features = features[:4]
@@ -80,24 +90,33 @@ with st.expander("🔍 Enter Data Manually"):
         except Exception as e:
             st.error(f"Prediction Error: {e}")
 
+# ==============================
 # Prediction Function
+# ==============================
 def predict_data(df):
 
     df = df.dropna().copy()
     y_true = None
 
+    # Handle label safely
     if 'label' in df.columns:
         y_true = df['label']
 
-        if y_true.dtype == 'object':
-            y_true = y_true.map(lambda x: 1 if str(x).lower() in ['attack', 'anomaly', '1'] else 0)
+        # Convert all attack types to 1
+        y_true = pd.Series(y_true).map(
+            lambda x: 1 if str(x).lower() in 
+            ['attack','anomaly','dos','probe','r2l','u2r','1'] 
+            else 0
+        )
 
         df = df.drop('label', axis=1)
 
+    # Encode categorical features
     for col in df.columns:
         if df[col].dtype == 'object':
             df[col] = LabelEncoder().fit_transform(df[col])
 
+    # Match features
     X = pd.DataFrame(columns=features)
 
     for col in df.columns:
@@ -106,6 +125,7 @@ def predict_data(df):
 
     X = X.fillna(0)
 
+    # Scale
     X_scaled = scaler.transform(X)
 
     preds = model.predict(X_scaled)
@@ -113,7 +133,9 @@ def predict_data(df):
 
     return preds, X, y_true
 
+# ==============================
 # Sidebar
+# ==============================
 st.sidebar.markdown("## 🔍 Filters")
 
 view_option = st.sidebar.selectbox(
@@ -121,7 +143,9 @@ view_option = st.sidebar.selectbox(
     ["All", "Normal Only", "Attack Only"]
 )
 
-# Upload CSV
+# ==============================
+# Upload Dataset
+# ==============================
 st.markdown("## 📂 Upload Dataset")
 
 file = st.file_uploader("Upload CSV File", type=["csv"])
@@ -132,6 +156,7 @@ if file:
     preds, X, y_true = predict_data(df)
     df['Prediction'] = preds
 
+    # Filter
     if view_option == "Normal Only":
         df = df[df['Prediction'] == 0]
     elif view_option == "Attack Only":
@@ -143,21 +168,23 @@ if file:
 
     numeric_df = X.select_dtypes(include=['int64', 'float64'])
 
+    # KPI
     col1, col2, col3 = st.columns(3)
 
     col1.markdown(f'<div class="glass">📊 Total<br><h2>{total}</h2></div>', unsafe_allow_html=True)
     col2.markdown(f'<div class="glass">✅ Normal<br><h2>{normal}</h2></div>', unsafe_allow_html=True)
     col3.markdown(f'<div class="glass">🚨 Attack<br><h2>{attacks}</h2></div>', unsafe_allow_html=True)
 
+    # Dashboard
     st.markdown("## 📊 Dashboard")
 
     col1, col2 = st.columns(2)
 
     with col1:
-        st.plotly_chart(px.bar(x=["Normal", "Attack"], y=[normal, attacks]), use_container_width=True)
+        st.plotly_chart(px.bar(x=["Normal","Attack"], y=[normal,attacks]), use_container_width=True)
 
     with col2:
-        st.plotly_chart(px.pie(names=["Normal", "Attack"], values=[normal, attacks]), use_container_width=True)
+        st.plotly_chart(px.pie(names=["Normal","Attack"], values=[normal,attacks]), use_container_width=True)
 
     trend = df['Prediction'].cumsum()
     st.plotly_chart(px.line(trend), use_container_width=True)
@@ -168,12 +195,15 @@ if file:
     if numeric_df.shape[1] >= 2:
         st.plotly_chart(px.box(numeric_df.iloc[:, :2]), use_container_width=True)
 
+    # Feature Importance
     st.markdown("## 📈 Feature Importance")
 
     if hasattr(model, "feature_importances_"):
-        importances = pd.Series(model.feature_importances_, index=features).sort_values(ascending=False).head(10)
+        importances = pd.Series(model.feature_importances_, index=features)\
+                        .sort_values(ascending=False).head(10)
         st.plotly_chart(px.bar(importances, orientation='h'), use_container_width=True)
 
+    # Evaluation
     if y_true is not None and len(set(y_true)) > 1:
 
         st.markdown("## 📊 Model Evaluation")
@@ -187,15 +217,19 @@ if file:
         cm = confusion_matrix(y_true, preds, labels=[0,1])
 
         cm_df = pd.DataFrame(cm,
-                             index=["Actual Normal", "Actual Attack"],
-                             columns=["Pred Normal", "Pred Attack"])
+                             index=["Actual Normal","Actual Attack"],
+                             columns=["Pred Normal","Pred Attack"])
 
         st.plotly_chart(px.imshow(cm_df, text_auto=True), use_container_width=True)
 
     else:
         st.warning("⚠️ Confusion Matrix not available")
 
+    # Attack Logs
     st.markdown("## 🚨 Attack Logs")
     st.dataframe(df[df['Prediction'] == 1])
 
-    st.download_button("⬇️ Download Results", df.to_csv(index=False), "results.csv")
+    # Download
+    st.download_button("⬇️ Download Results",
+                       df.to_csv(index=False),
+                       "results.csv")
